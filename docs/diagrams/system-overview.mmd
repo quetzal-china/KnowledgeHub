@@ -1,0 +1,40 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#f3f9ff', 'primaryBorderColor': '#0ea5e9', 'lineColor': '#64748b', 'fontSize': '14px'}}}%%
+flowchart TB
+    subgraph UI["🖥️ 用户界面"]
+        A["<b>Streamlit Web</b><br/>输入: Transformer优化的最新进展"]
+    end
+
+    subgraph Controller["⚙️ 主控制器 main.py"]
+        B["1. 接收用户输入<br/>2. LLM 分析意图<br/>3. 分发任务<br/>4. 整合结果"]
+    end
+
+    subgraph Analysis["🧠 智能分析层"]
+        C["<b>DeepSeek API</b><br/>• 关键词提取<br/>• 意图识别<br/>• 参数优化"]
+    end
+
+    subgraph DataSources["📊 数据采集层"]
+        direction LR
+        D["<b>arXiv 模块</b><br/>• 搜索策略<br/>• 直接访问<br/>• Scrapy<br/>• Pipeline"]
+        E["<b>知乎模块</b><br/>• TinyFish API<br/>• 链接发现<br/>• 内容抓取<br/>• 数据解析"]
+    end
+
+    subgraph Pipeline["🔄 数据处理管道"]
+        F["• 清洗<br/>• 验证<br/>• 格式化<br/>• 质量评分"]
+    end
+
+    subgraph Output["📤 输出层"]
+        G["• JSON 文件<br/>• Markdown 文档<br/>• 可视化图表<br/>• Web 展示"]
+    end
+
+    UI --> Controller
+    Controller --> Analysis
+    Controller --> DataSources
+    DataSources --> Pipeline
+    Pipeline --> Output
+
+    style UI fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0369a1
+    style Controller fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#92400e
+    style Analysis fill:#fce7f3,stroke:#db2777,stroke-width:2px,color:#9f1239
+    style DataSources fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#166534
+    style Pipeline fill:#f3e8ff,stroke:#9333ea,stroke-width:2px,color:#6b21a8
+    style Output fill:#fff7ed,stroke:#ea580c,stroke-width:2px,color:#9a3412

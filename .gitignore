@@ -1,2 +1,10 @@
 # 环境变量文件
 .env
+
+# python 缓存
+__pycache__/
+knowledge_hub/knowledge_hub/__pycache__
+
+# output
+output/
+knowledge_hub/knowledge_hub/output/

@@ -1,0 +1,24 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#f0fdf4', 'primaryBorderColor': '#16a34a', 'lineColor': '#64748b', 'fontSize': '13px'}}}%%
+flowchart TD
+    A["👤 用户输入<br/><i>'Transformer优化'</i>"] --> B["🧠 <b>smart_search.py</b><br/>LLM 分析<br/>输出: keywords, sortBy, max_results"]
+
+    B --> C["🔗 <b>构建 URL</b><br/>https://arxiv.org/search/?query=XXX&order=YYY"]
+
+    C --> D["🕷️ <b>arxiv_spider.py</b><br/>Scrapy 参数化爬虫"]
+
+    D --> E["🌐 <b>访问 arXiv.org</b><br/>直接访问学术数据库"]
+
+    E --> F["📝 <b>XPath 解析</b><br/>提取 HTML 中的论文数据"]
+
+    F --> G["✨ <b>pipelines.py</b><br/>数据清洗与验证"]
+
+    G --> H["✅ <b>输出文件</b><br/>arxiv_data.json<br/>(50条论文)"]
+
+    style A fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e40af
+    style B fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#92400e
+    style C fill:#e0e7ff,stroke:#4f46e5,stroke-width:2px,color:#3730a3
+    style D fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#166534
+    style E fill:#f0fdf4,stroke:#15803d,stroke-width:2px,color:#14532d
+    style F fill:#fff7ed,stroke:#ea580c,stroke-width:2px,color:#9a3412
+    style G fill:#fdf2f8,stroke:#db2777,stroke-width:2px,color:#9f1239
+    style H fill:#ecfdf5,stroke:#059669,stroke-width:2px,color:#065f46

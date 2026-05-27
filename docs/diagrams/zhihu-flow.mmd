@@ -1,0 +1,27 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#eff6ff', 'primaryBorderColor': '#3b82f6', 'lineColor': '#64748b', 'fontSize': '13px'}}}%%
+flowchart TD
+    A["👤 用户输入<br/><i>'Transformer优化实战'</i>"] --> B["🧠 <b>smart_search.py</b><br/>LLM 分析<br/>输出: keywords, intent='找实践案例'"]
+
+    B --> C["🔍 <b>tinyfish_client.py</b><br/>搜索引擎中间件<br/>POST: query + platform=zhihu"]
+
+    C --> D["🌐 <b>TinyFish API</b><br/>搜索多个平台<br/>返回相关 URL 列表"]
+
+    D --> E["📋 <b>URL 列表</b><br/>['https://zhihu.com/question/12345', ...]<br/>(12个链接)"]
+
+    E --> F["🕷️ <b>zhihu_spider.py</b><br/>知乎爬虫<br/>访问页面/API"]
+
+    F --> G["💬 <b>内容提取</b><br/>解析回答、点赞数、评论等"]
+
+    G --> H["✨ <b>pipelines.py</b><br/>数据清洗与验证<br/>过滤低质量内容"]
+
+    H --> I["✅ <b>输出文件</b><br/>zhihu_data.json<br/>(20条高质量回答)"]
+
+    style A fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e40af
+    style B fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#92400e
+    style C fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#5b21b6
+    style D fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#075985
+    style E fill:#f0f9ff,stroke:#0891b2,stroke-width:2px,color:#155e75
+    style F fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#166534
+    style G fill:#fff7ed,stroke:#ea580c,stroke-width:2px,color:#9a3412
+    style H fill:#fdf2f8,stroke:#db2777,stroke-width:2px,color:#9f1239
+    style I fill:#ecfdf5,stroke:#059669,stroke-width:2px,color:#065f46
