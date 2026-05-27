@@ -1,16 +1,53 @@
+"""
+arxiv.py — arXiv 论文爬虫
+
+使用方式:
+    # 通过 smart_search 生成 URL 后传给爬虫
+    scrapy crawl arxiv -a url="https://arxiv.org/search/?searchtype=all&query=..."
+
+    # 不传 url 则使用默认查询
+    scrapy crawl arxiv
+"""
+
 import scrapy
-from knowledge_hub.items import ArxivItem
 import re
+from knowledge_hub.items import ArxivItem
 
 
 class ArxivSpider(scrapy.Spider):
     name = "arxiv"
     allowed_domains = ["arxiv.org"]
-    start_urls = ["https://arxiv.org/search/?query=transformer+optimization&searchtype=all"]
+
+    # 默认搜索 URL，可通过 -a url=xxx 覆盖
+    custom_settings = {
+        "DOWNLOAD_DELAY": 2,
+        "CONCURRENT_REQUESTS": 1,
+    }
+
+    def __init__(self, url=None, *args, **kwargs):
+        """
+        初始化爬虫
+
+        参数:
+            url: arXiv 搜索页 URL，由 smart_search() 生成
+                 格式: https://arxiv.org/search/?searchtype=all&query=...&abstracts=show&size=50&order=...
+        """
+        super().__init__(*args, **kwargs)
+
+        if url:
+            self.start_urls = [url]
+            self.logger.info(f"使用 LLM 生成的 URL: {url}")
+        else:
+            # 默认 URL，用于直接 scrapy crawl arxiv 的场景
+            self.start_urls = [
+                "https://arxiv.org/search/?searchtype=all&query=transformer+optimization&abstracts=show&size=50&order="
+            ]
+            self.logger.info("使用默认 URL（未指定 -a url 参数）")
 
     def parse(self, response):
         # 找到页面上所有的论文条目（每个论文都在一个 <li> 标签里）
         papers = response.xpath('//li[contains(@class, "arxiv-result")]')
+        self.logger.info(f"本页找到 {len(papers)} 篇论文")
 
         # 遍历每一篇论文
         for paper in papers:
@@ -101,3 +138,9 @@ class ArxivSpider(scrapy.Spider):
 
             # 返回这条数据（yield 会把数据传给 pipeline 处理）
             yield item
+
+        # 翻页：如果还有下一页则继续爬取
+        next_page = response.xpath('//a[contains(@class, "pagination-next")]/@href').get()
+        if next_page:
+            self.logger.info(f"发现下一页: {next_page}")
+            yield response.follow(next_page, callback=self.parse)
