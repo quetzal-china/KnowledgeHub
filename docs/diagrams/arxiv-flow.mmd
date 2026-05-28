@@ -1,18 +1,18 @@
 %%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#f0fdf4', 'primaryBorderColor': '#16a34a', 'lineColor': '#64748b', 'fontSize': '13px'}}}%%
 flowchart TD
-    A["👤 用户输入<br/><i>'Transformer优化'</i>"] --> B["🧠 <b>smart_search.py</b><br/>LLM 分析<br/>输出: keywords, sortBy, max_results"]
+    A["👤 用户输入<br/><i>'Transformer优化的最新进展'</i>"] --> B["🧠 <b>smart_search.py</b><br/>LLM 分析意图<br/>输出: keywords, url, size, order"]
 
-    B --> C["🔗 <b>构建 URL</b><br/>https://arxiv.org/search/?query=XXX&order=YYY"]
+    B --> C["🔗 <b>LLM 生成搜索 URL</b><br/>https://arxiv.org/search/?query=...&size=50&order=-announced_date_first"]
 
-    C --> D["🕷️ <b>arxiv_spider.py</b><br/>Scrapy 参数化爬虫"]
+    C --> D["🕷️ <b>spiders/arxiv.py</b><br/>Scrapy 参数化爬虫<br/>-a url=..."]
 
-    D --> E["🌐 <b>访问 arXiv.org</b><br/>直接访问学术数据库"]
+    D --> E["🌐 <b>访问 arXiv.org</b><br/>直接爬取搜索结果页"]
 
-    E --> F["📝 <b>XPath 解析</b><br/>提取 HTML 中的论文数据"]
+    E --> F["📝 <b>XPath 解析</b><br/>提取: 标题/作者/摘要/分类/日期/PDF链接"]
 
     F --> G["✨ <b>pipelines.py</b><br/>数据清洗与验证"]
 
-    G --> H["✅ <b>输出文件</b><br/>arxiv_data.json<br/>(50条论文)"]
+    G --> H["✅ <b>输出文件</b><br/>arxiv_data.json<br/>(论文全文数据)"]
 
     style A fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e40af
     style B fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#92400e

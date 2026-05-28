@@ -1,37 +1,39 @@
 %%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#faf5ff', 'primaryBorderColor': '#a855f7', 'lineColor': '#64748b', 'fontSize': '14px'}}}%%
 flowchart LR
     subgraph Input["📥 输入"]
-        A["关键词列表<br/>['transformer', '优化']"]
+        A["用户查询<br/>'Transformer优化'"]
     end
 
-    subgraph TF["🐟 TinyFish API"]
-        B["<b>功能:</b><br/>1️⃣ 关键词搜索 → 返回URL列表<br/>2️⃣ 平台筛选 → 只返回指定平台<br/>3️⃣ 结果排序 → 相关性/热度/时间<br/>4️⃣ 去重合并 → 过滤重复内容"]
+    subgraph LLM["🧠 LLM 智能分析"]
+        B["<b>功能:</b><br/>1️⃣ 意图识别<br/>2️⃣ 关键词提取<br/>3️⃣ 参数优化<br/>4️⃣ 生成搜索参数"]
     end
 
-    subgraph Platforms["🎯 支持的平台"]
+    subgraph Sources["🎯 数据源路由"]
         direction TB
-        P1["✅ 知乎<br/>zhihu.com"]
-        P2["✅ B站<br/>bilibili.com"]
-        P3["✅ CSDN<br/>csdn.net"]
-        P4["✅ 微信公众号<br/>mp.weixin.qq.com"]
-        P5["✅ 博客园<br/>cnblogs.com"]
-        P6["❌ arXiv<br/>arxiv.org<br/><i>(不需要)</i>"]
+        P1["✅ arXiv<br/>LLM 生成 URL<br/>Scrapy 爬取"]
+        P2["✅ 知乎<br/>LLM 生成 keywords<br/>开发者 API"]
+        P3["⏳ B站<br/>待扩展"]
+        P4["⏳ CSDN<br/>待扩展"]
+    end
+
+    subgraph Report["📝 报告生成"]
+        C["LLM 综合分析<br/>arXiv × 知乎交叉<br/>生成 Markdown"]
     end
 
     subgraph Output["📤 输出"]
-        C["URL 列表<br/>['https://...', ...]"]
+        D["merged_report.md<br/>arxiv_data.json<br/>zhihu_data.json"]
     end
 
-    Input --> TF
-    TF --> Platforms
-    TF --> Output
+    Input --> LLM
+    LLM --> Sources
+    Sources --> Report
+    Report --> Output
 
     style Input fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e40af
-    style TF fill:#faf5ff,stroke:#a855f7,stroke-width:2px,color:#7e22ce
+    style LLM fill:#fce7f3,stroke:#db2777,stroke-width:2px,color:#9f1239
     style P1 fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#166534
     style P2 fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#166534
-    style P3 fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#166534
-    style P4 fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#166534
-    style P5 fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#166534
-    style P6 fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#991b1b
+    style P3 fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#92400e
+    style P4 fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#92400e
+    style Report fill:#fdf2f8,stroke:#db2777,stroke-width:2px,color:#9f1239
     style Output fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#92400e

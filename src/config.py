@@ -21,6 +21,11 @@ class DeepSeekConfig:
     SYSTEM_PROMPT = "You are a helpful assistant"
 
 
+class ZhihuConfig:
+    BASE_URL = os.getenv("ZHIHU_BASE_URL", "https://developer.zhihu.com/api/v1/content/zhihu_search")
+    ACCESS_KEY = os.getenv("ZHIHU_ACCESS_KEY")
+
+
 PROVIDERS = {
     "mimo": MiMoConfig,
     "deepseek": DeepSeekConfig,
@@ -34,6 +39,7 @@ class Config:
     LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "8192"))
 
     TINYFISH_API_KEY = os.getenv("TINYFISH_API_KEY")
+    ZHIHU_ACCESS_KEY = os.getenv("ZHIHU_ACCESS_KEY")
 
     ARXIV_MAX_PAGES = int(os.getenv("ARXIV_MAX_PAGES", "5"))
     ZHIHU_MAX_ANSWERS = int(os.getenv("ZHIHU_MAX_ANSWERS", "50"))

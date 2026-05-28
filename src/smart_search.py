@@ -26,8 +26,8 @@ ORDER_MAP = {
 
 
 def build_llm_prompt(user_query: str) -> str:
-    """构建 LLM prompt，要求输出标准化的搜索参数 JSON"""
-    return f"""根据用户需求生成arXiv搜索参数。
+    """构建 LLM prompt，要求输出包含完整 URL 的搜索参数 JSON"""
+    return f"""根据用户需求生成arXiv搜索URL。
 
 用户: {user_query}
 
@@ -35,7 +35,7 @@ arXiv语法:
 {ARXIV_SEARCH_STRATEGY}
 
 输出JSON:
-{{"intent":"","keywords":"","order":"","size":0}}"""
+{{"intent":"","keywords":"","url":"","size":0}}"""
 
 
 def build_arxiv_url(keywords: str, order: str = "", size: int = 50) -> str:
@@ -69,10 +69,9 @@ def smart_search(query: str, use_llm: bool = True) -> dict:
     返回:
         {
             "url":      "https://arxiv.org/search/?searchtype=all&query=...&abstracts=show&size=50&order=...",
-            "keywords": "Transformer AND optimization",   # LLM 构建的查询语句
-            "order":    "-announced_date_first",          # 排序方式
-            "size":     50,                                # 结果数量
-            "intent":   "追踪Transformer优化最新进展"       # 意图描述
+            "keywords": "Transformer AND optimization",
+            "size":     50,
+            "intent":   "追踪Transformer优化最新进展"
         }
     """
     if not use_llm:
@@ -81,14 +80,14 @@ def smart_search(query: str, use_llm: bool = True) -> dict:
     # 调用 LLM 生成搜索参数
     llm_result = chat_json(
         user_message=build_llm_prompt(query),
-        system_message="arXiv搜索参数生成器。只输出JSON。",
+        system_message="arXiv搜索url生成器。只输出JSON。",
         temperature=0.3,
         max_tokens=4096,
     )
 
-    # 从 LLM 返回值中提取参数，提供默认值兜底
+    # 从 LLM 返回值中直接提取完整 URL 和元信息
+    url = llm_result.get("url", "")
     keywords = llm_result.get("keywords", "")
-    order = llm_result.get("order", "")
     size = llm_result.get("size", 50)
     intent = llm_result.get("intent", "")
 
@@ -96,13 +95,13 @@ def smart_search(query: str, use_llm: bool = True) -> dict:
     if not isinstance(size, int) or size not in (25, 50):
         size = 25 if size < 40 else 50
 
-    # 构建 arXiv URL
-    url = build_arxiv_url(keywords, order, size)
+    # URL 兜底：如果 LLM 未返回 url，则本地构建
+    if not url:
+        url = build_arxiv_url(keywords, "", size)
 
     return {
         "url": url,
         "keywords": keywords,
-        "order": order,
         "size": size,
         "intent": intent,
     }
@@ -113,12 +112,12 @@ def _mock_search(query: str) -> dict:
     query_lower = query.lower()
 
     if any(w in query_lower for w in ["最新", "最近", "newest", "latest", "recent"]):
-        keywords = "all:transformer AND all:optimization"
+        keywords = "Transformer optimization"
         order = "-announced_date_first"
         size = 50
         intent = "追踪最新动态"
     elif any(w in query_lower for w in ["学习", "入门", "learn", "beginner"]):
-        keywords = "transformer attention mechanism"
+        keywords = "Transformer attention mechanism"
         order = ""
         size = 25
         intent = "入门学习"
@@ -131,7 +130,6 @@ def _mock_search(query: str) -> dict:
     return {
         "url": build_arxiv_url(keywords, order, size),
         "keywords": keywords,
-        "order": order,
         "size": size,
         "intent": intent,
     }
@@ -153,6 +151,5 @@ if __name__ == "__main__":
         result = smart_search(query)
         print(f"意图:   {result['intent']}")
         print(f"关键词: {result['keywords']}")
-        print(f"排序:   {ORDER_MAP.get(result['order'], result['order'])}")
         print(f"数量:   {result['size']}")
         print(f"URL:    {result['url']}")

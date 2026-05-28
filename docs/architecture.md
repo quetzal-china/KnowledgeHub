@@ -12,146 +12,91 @@
 
 ## 二、两条数据流对比
 
-### 2.1 arXiv 路线（直接访问）
+### 2.1 arXiv 路线（Scrapy 爬取）
 
 ![arXiv 数据流](diagrams/arxiv-flow.png)
 
-*图2: arXiv 数据采集流程 - 不使用 TinyFish*
+*图2: arXiv 数据采集流程*
 
-**为什么 arXiv 不用 TinyFish?**
+**数据流:**
+
+```
+用户查询 → LLM 生成 arXiv URL → Scrapy 爬取搜索结果页 → Pipeline 清洗 → 论文全文数据
+```
+
+**为什么 arXiv 用 Scrapy 直接爬？**
 
 | 原因 | 说明 |
 |------|------|
-| 自带搜索功能 | arXiv 有强大的搜索 API 和网页界面 |
-| 访问稳定快速 | 直接连接比通过中间件更快 |
-| 精确控制参数 | 可以利用 arXiv 特有的排序和过滤 |
-| 减少依赖 | 无需依赖第三方服务 |
+| 自带搜索功能 | arXiv 网页搜索支持关键词 + AND/OR/NOT + 排序 |
+| 访问稳定 | 无反爬限制，直接连接即可 |
+| 精确控制 | 可利用 arXiv 特有的排序（相关性/时间）和分页 |
+| 数据完整 | 搜索结果页包含标题/作者/摘要/分类/日期/PDF链接 |
+
+**输出字段:** title, authors, abstract, categories, submitted_date, paper_url, pdf_url
 
 ---
 
-### 2.2 知乎路线（通过 TinyFish）
+### 2.2 知乎路线（API 搜索）
 
 ![知乎数据流](diagrams/zhihu-flow.png)
 
-*图3: 知乎数据采集流程 - 使用 TinyFish 中间件*
+*图3: 知乎数据采集流程*
 
-**为什么知乎要用 TinyFish?**
+**数据流:**
+
+```
+用户查询 → LLM 生成 keywords → 知乎开发者 API 搜索 → 摘要 + 元数据
+```
+
+**为什么知乎用 API 而不是 Scrapy？**
 
 | 原因 | 说明 |
 |------|------|
-| 反爬严格 | 知乎反爬机制强，直接搜索易被封 |
-| 模拟用户行为 | TinyFish 可以模拟正常浏览 |
-| 多平台扩展 | 同时支持 B站、CSDN 等 |
-| 降低风险 | 减少被封禁的概率 |
+| 反爬严格 | 知乎反爬机制强，Scrapy 直接爬会被封 |
+| 官方 API | 知乎提供开发者搜索 API，合法稳定 |
+| 数据够用 | API 返回摘要 + 点赞/评论/作者等元数据，满足精选推荐需求 |
+| 无需全文 | 知乎内容的价值在于"精选链接 + 综合摘要"，不需要逐条爬全文 |
+
+**为什么不用 TinyFish？**
+
+| 原因 | 说明 |
+|------|------|
+| 官方 API 更稳定 | 知乎开发者 API 是官方渠道，比第三方代理更可靠 |
+| 减少依赖 | 不需要额外付费的中间件 |
+| 数据更准确 | 官方 API 返回结构化数据，无需解析 HTML |
+
+**输出字段:** title, excerpt, url, voteup_count, comment_count, author_name, authority_level, ranking_score
 
 ---
 
-## 三、TinyFish 的角色定位
-
-### 3.1 它是什么？
-
-```
-TinyFish = 通用搜索引擎的"代理"
-              ↓
-帮你搜索多个平台，返回相关链接
-```
-
-### 3.2 支持的平台
-
-![TinyFish 角色图](diagrams/tinyfish-role.png)
-
-*图4: TinyFish 支持的搜索平台*
-
-### 3.3 API 调用示例
-
-```python
-import requests
-
-def search_tinyfish(keywords: list, platform: str = "zhihu", limit: int = 20):
-    """
-    调用 TinyFish 搜索 API
-    
-    参数:
-        keywords: 搜索关键词列表
-        platform: 目标平台 ("zhihu", "bilibili", "csdn")
-        limit: 返回结果数量
-    
-    返回:
-        URL 列表
-    """
-    
-    url = "https://api.tinyfish.com/v1/search"
-    
-    payload = {
-        "query": " ".join(keywords),
-        "platform": platform,
-        "limit": limit,
-        "sort_by": "relevance"  # 或 "hotness", "time"
-    }
-    
-    headers = {
-        "Authorization": f"Bearer {TINYFISH_API_KEY}",
-        "Content-Type": "application/json"
-    }
-    
-    response = requests.post(url, json=payload, headers=headers)
-    data = response.json()
-    
-    # 提取 URL 列表
-    urls = [item['url'] for item in data['results']]
-    
-    return urls
-
-
-# 使用示例
-keywords = ["transformer", "优化", "实战"]
-zhihu_urls = search_tinyfish(keywords, platform="zhihu", limit=10)
-
-print(f"找到 {len(zhihu_urls)} 条知乎结果:")
-for url in zhihu_urls[:3]:
-    print(f"  - {url}")
-```
-
----
-
-## 四、完整调用链路示例
+## 三、完整 Workflow（A+C 方案）
 
 ### 场景
 
-> **用户输入**: "我想了解 Transformer 优化的最新进展，包括理论研究和工程实践"
+> **用户输入**: "我想了解 Transformer 优化的最新进展"
 
 ---
 
 ### Step 1: LLM 智能分析
 
+`src/smart_search.py` → `smart_search()`
+
+LLM 分析用户意图，生成两条路线的搜索参数：
+
 ```json
 {
-  "intent": "综合调研：理论+实践",
-  
-  "keywords": [
-    "transformer optimization",
-    "LLM efficiency",
-    "attention mechanism improvement",
-    "model compression"
-  ],
-  
-  "data_sources": {
-    "arxiv": {
-      "enabled": true,
-      "query": "(ti:transformer OR abs:optimization) AND (cat:cs.LG OR cat:cs.CL)",
-      "sort_by": "submittedDate",
-      "sort_order": "descending",
-      "max_results": 30,
-      "reason": "用户要求'最新进展'，优先显示最新论文"
-    },
-    
-    "zhihu": {
-      "enabled": true,
-      "keywords": ["transformer优化", "LLM加速", "模型压缩"],
-      "platform": "zhihu",
-      "limit": 15,
-      "reason": "用户提到'工程实践'，知乎有很多实践经验分享"
-    }
+  "intent": "理论+实践综合调研",
+
+  "arxiv": {
+    "url": "https://arxiv.org/search/?searchtype=all&query=Transformer%20AND%20optimization&abstracts=show&size=50&order=-announced_date_first",
+    "keywords": "Transformer AND optimization",
+    "size": 50
+  },
+
+  "zhihu": {
+    "query": "Transformer优化 LLM加速 模型压缩",
+    "limit": 15
   }
 }
 ```
@@ -160,141 +105,125 @@ for url in zhihu_urls[:3]:
 
 ### Step 2: 并行采集数据
 
-#### arXiv 分支执行过程
+#### arXiv 分支
 
-| 步骤 | 操作 | 输出 |
-|------|------|------|
-| 1 | 构建搜索 URL | `https://arxiv.org/search/?query=transformer+optimization&order=submittedDate` |
-| 2 | Scrapy 爬取 | 30 篇论文原始数据 |
-| 3 | Pipeline 清洗 | 过滤无效字段、格式统一 |
-| 4 | 最终结果 | **28 条有效论文数据** |
-
-**采样输出:**
-- 📄 论文1: G3T Up! Gravity Aligned...
-- 📄 论文2: PARE: Pruning and Adaptive...
-- 📄 论文3: Probabilistic Smoothing...
-
----
-
-#### 知乎分支执行过程
-
-| 步骤 | 操作 | 输出 |
-|------|------|------|
-| 1 | TinyFish 搜索 | 发现 12 个相关问题 URL |
-| 2 | 知乎爬虫抓取 | 提取回答内容、点赞数等 |
-| 3 | Pipeline 清洗 | 过滤低质量/重复内容 |
-| 4 | 最终结果 | **10 条高质量回答** |
+| 步骤 | 模块 | 操作 | 输出 |
+|------|------|------|------|
+| 1 | `smart_search.py` | LLM 生成搜索 URL | arXiv 搜索页 URL |
+| 2 | `spiders/arxiv.py` | Scrapy 爬取搜索结果页 | 论文原始数据 |
+| 3 | `pipelines.py` | Pipeline 清洗 | 过滤空值、格式统一 |
+| 4 | — | 最终结果 | **论文全文数据** |
 
 **采样输出:**
-- 💬 回答1: ⬆️1234赞 - 工程师实战经验
-- 💬 回答2: ⬆️890赞 - 模型压缩技巧
-- 💬 回答3: ⬆️567赞 - 训练加速方法
+- 📄 论文1: Flash Attention 2: Faster and Better Attention...
+- 📄 论文2: GPTQ: Accurate Post-Training Quantization...
+- 📄 论文3: SmoothQuant: Accurate and Efficient Post-Training...
 
 ---
 
-### Step 3: 整合输出
+#### 知乎分支
 
-```json
-{
-  "total_results": 38,
-  
-  "sources": {
-    "arxiv": {
-      "count": 28,
-      "fields": ["title", "authors", "abstract", "categories", "submitted_date", "paper_url"]
-    },
-    
-    "zhihu": {
-      "count": 10,
-      "fields": ["question", "answer_content", "likes", "comments", "author"]
-    }
-  },
-  
-  "processing": {
-    "quality_score": "基于点赞数/引用量/时效性",
-    "deduplication": "去除重复内容",
-    "summarization": "LLM 生成摘要"
-  }
-}
-```
+| 步骤 | 模块 | 操作 | 输出 |
+|------|------|------|------|
+| 1 | `smart_search.py` | LLM 生成搜索关键词 | 中文关键词 |
+| 2 | `zhihu_client.py` | 调用知乎搜索 API | 摘要 + 元数据 |
+| 3 | — | 按 voteup_count 排序 | 精选结果 |
 
-**输出文件结构:**
+**采样输出:**
+- 💬 ⬆️2345赞 Transformer推理加速实战总结
+- 💬 ⬆️1890赞 LLM量化从GPTQ到AWQ全对比
+- 💬 ⬆️956赞 小白如何入门模型优化
 
-```
-📁 output/
-├── 📊 arxiv_data.json          (28条论文)
-│   ├── 标题、作者、摘要
-│   ├── 分类、日期
-│   └── PDF链接
-│
-├── 💬 zhihu_data.json           (10条回答)
-│   ├── 问题描述
-│   ├── 回答内容
-│   ├── 点赞数、评论数
-│   └── 作者信息
-│
-├── 📝 merged_report.md          (Markdown报告)
-│   ├── 执行摘要
-│   ├── 论文综述
-│   ├── 实践经验汇总
-│   └── 参考资料列表
-│
-└── 📈 visualization/
-    ├── timeline.png           (时间趋势图)
-    ├── wordcloud.png          (词云图)
-    └── comparison.png         (来源对比图)
+---
+
+### Step 3: LLM 综合分析（方案 A + C）
+
+`src/report_generator.py` → `generate_report()`
+
+将 arXiv 论文数据 + 知乎讨论数据一起喂给 LLM，生成两类分析：
+
+**方案 A: 知乎综合摘要**
+
+> "知乎社区主要关注三个方向：工程加速（Flash Attention、vLLM）、模型压缩（量化、剪枝）、训练技巧（混合精度、梯度累积）"
+
+**方案 C: arXiv × 知乎交叉分析**
+
+| 方向 | arXiv 理论 | 知乎实践 |
+|------|-----------|---------|
+| 加速 | Flash Attention 2 论文提出... | 工程师实测加速3倍 |
+| 量化 | GPTQ 论文证明4bit无损... | 踩坑经验：哪些模型能量化 |
+| 剪枝 | SparseGPT 论文提出... | 实际部署效果不如预期 |
+
+---
+
+### Step 4: 输出报告
+
+```markdown
+# Transformer 优化调研报告
+
+## 理论研究 (arXiv)
+- Flash Attention 2: 论文摘要...
+- GPTQ 量化: 论文摘要...
+
+## 工程实践 (知乎)
+> 社区主要关注：工程加速/模型压缩/训练技巧
+- ⬆️2.3k 实战总结 → url
+- ⬆️1.8k 量化对比 → url
+
+## 理论 × 实践对照
+| 方向 | arXiv 理论 | 知乎实践 |
+| 加速 | FA2论文 | 实测3倍提速 |
+| 量化 | GPTQ论文 | 踩坑经验 |
 ```
 
 ---
 
-## 五、技术栈说明
+## 四、技术栈说明
 
 | 模块 | 使用技术 | 说明 |
 |------|---------|------|
-| **用户界面** | Streamlit | Web UI，简单易用 |
-| **智能分析** | DeepSeek API | LLM 关键词提取 + 意图识别 |
-| **arXiv 搜索** | Scrapy + XPath | 直接访问 arXiv.org |
-| **通用搜索** | TinyFish API | 用于知乎/B站/CSDN等多平台 |
-| **数据抓取** | Scrapy | 统一爬虫框架 |
-| **数据处理** | Pandas + Pipeline | 清洗 / 验证 / 评分 |
-| **内容总结** | DeepSeek API | AI 自动生成摘要 |
-| **可视化** | Matplotlib | 生成各种图表 |
+| **智能分析** | MiMo / DeepSeek API | LLM 意图识别 + 关键词生成 + URL 构建 |
+| **arXiv 搜索** | Scrapy + XPath | 直接访问 arXiv.org，LLM 生成搜索 URL |
+| **知乎搜索** | 知乎开发者 API | 官方搜索接口，返回摘要 + 元数据 |
+| **数据处理** | Scrapy Pipeline | 清洗 / 验证 / 格式统一 |
+| **综合分析** | MiMo / DeepSeek API | LLM 生成交叉分析报告 |
 | **输出格式** | Markdown + JSON | 结构化文档输出 |
 
 ---
 
-## 六、开发进度
+## 五、开发进度
 
 ### Phase 1: 核心功能 ✅ 已完成
 
 | 任务 | 文件路径 | 完成状态 | 说明 |
 |------|---------|----------|------|
-| arXiv 爬虫 | `spiders/arxiv.py` | ✅ 完成 | 能抓取7个字段，支持动态URL |
-| 数据处理管道 | `pipelines.py` | ✅ 完成 | 自动清洗空值、格式统一化、链接验证 |
-| 搜索策略知识库 | `search_strategy.py` | ✅ 完成 | 包含5种典型场景的最佳实践 |
-| 智能参数生成器 | `smart_search.py` | ✅ 完成 | 根据需求选择最优参数（当前为模拟版） |
+| arXiv 爬虫 | `knowledge_hub/spiders/arxiv.py` | ✅ 完成 | 7个字段，支持 `-a url` 动态 URL |
+| 数据处理管道 | `knowledge_hub/pipelines.py` | ✅ 完成 | 自动清洗空值、格式统一化、链接验证 |
+| 数据结构定义 | `knowledge_hub/items.py` | ✅ 完成 | ArxivItem 定义 |
+| Scrapy 配置 | `knowledge_hub/settings.py` | ✅ 完成 | Pipeline 启用、下载延迟、并发控制 |
+| 搜索策略知识库 | `src/search_strategy.py` | ✅ 完成 | arXiv 网页搜索语法规则 |
+| 智能搜索 | `src/smart_search.py` | ✅ 完成 | LLM 生成搜索 URL，支持 mock 模式 |
+| LLM 客户端 | `src/llm_client.py` | ✅ 完成 | chat/chat_text/chat_json，重试+token追踪 |
+| 配置管理 | `src/config.py` | ✅ 完成 | MiMo/DeepSeek/Zhihu 配置，.env 加载 |
 
 ---
 
-### Phase 2: 多源采集 🔄 进行中
+### Phase 2: 知乎接入 🔄 进行中
 
 | 任务 | 文件路径 | 完成状态 | 说明 |
 |------|---------|----------|------|
-| TinyFish 客户端封装 | `tinyfish_client.py` | 🔲 待开发 | 封装API调用逻辑、错误处理和重试机制 |
-| 知乎爬虫开发 | `spiders/zhihu.py` | 🔲 待开发 | 接收TinyFish返回的URL、提取问答内容 |
-| 数据源路由逻辑 | `main.py` | 🔲 待开发 | 判断走哪条路线、并发任务调度 |
-| 并发采集框架 | - | 🔲 待开发 | 支持多数据源并行采集 |
+| 知乎搜索客户端 | `src/zhihu_client.py` | 🔄 开发中 | 封装知乎开发者搜索 API |
+| 多数据源路由 | `src/smart_search.py` | 🔲 待扩展 | 支持同时生成 arXiv + 知乎参数 |
+| 知乎搜索策略 | `src/search_strategy.py` | 🔲 待扩展 | 添加知乎搜索语法规则 |
 
 ---
 
-### Phase 3: 智能增强 ⏳ 待开发
+### Phase 3: 报告生成 ⏳ 待开发
 
-| 任务 | 说明 |
-|------|------|
-| 接入真实 LLM (DeepSeek) | 替换 smart_search.py 的模拟版本 |
-| 内容自动总结 | 对采集的数据生成摘要 |
-| 质量评估算法 | 基于点赞数/引用量/时效性评分 |
-| 个性化推荐 | 根据用户历史偏好推荐内容 |
+| 任务 | 文件路径 | 说明 |
+|------|---------|------|
+| 报告生成器 | `src/report_generator.py` | LLM 综合分析 arXiv + 知乎数据，生成 Markdown 报告 |
+| 主程序入口 | `main.py` | 统一调度：LLM → arXiv + 知乎 → 报告 |
 
 ---
 
@@ -302,44 +231,54 @@ for url in zhihu_urls[:3]:
 
 | 任务 | 说明 |
 |------|------|
-| Matplotlib 图表 | 时间趋势图、词云图、来源对比图 |
-| Markdown 报告生成 | 自动生成人类可读的报告 |
+| Markdown 报告输出 | 自动生成人类可读的调研报告 |
 | Streamlit Web 界面 | 交互式数据展示 |
 | 导出功能 | 支持 PDF/Word/Excel 导出 |
 
 ---
 
-## 七、关键设计决策
+## 六、关键设计决策
 
-### 决策1: 为什么 arXiv 不走 TinyFish?
+### 决策1: arXiv 用 Scrapy 直接爬
 
-**结论**: 直接访问 arXiv.org
-
-| 因素 | 选择直接访问的优势 |
-|------|-------------------|
+| 因素 | 选择直接爬的优势 |
+|------|-----------------|
 | 性能 | 延迟更低，响应更快 |
 | 功能 | 可精确控制排序和过滤条件 |
-| 稳定性 | 减少对外部服务的依赖 |
-| 成本 | 无需支付第三方服务费用 |
+| 稳定性 | 无反爬限制，减少对外部服务的依赖 |
+| 数据完整 | 搜索结果页包含论文全文摘要 |
 
 ---
 
-### 决策2: 为什么知乎要走 TinyFish?
+### 决策2: 知乎用开发者 API
 
-**结论**: 通过 TinyFish 搜索
+| 因素 | 选择 API 的优势 |
+|------|----------------|
+| 安全性 | 官方渠道，不会被封 |
+| 稳定性 | 结构化 JSON 返回，无需解析 HTML |
+| 合规性 | 使用官方授权接口 |
+| 够用性 | 摘要 + 元数据足以支撑精选推荐和综合分析 |
 
-| 因素 | 选择 TinyFish 的优势 |
-|------|---------------------|
-| 安全性 | 降低被知乎封禁的风险 |
-| 扩展性 | 支持多平台（B站、CSDN等） |
-| 行为模拟 | 模拟正常用户浏览模式 |
-| 结果质量 | 返回更相关的链接 |
+**不选 Scrapy 的原因:** 知乎反爬严格，直接爬会被封禁
+
+**不选 TinyFish 的原因:** 已有官方 API，无需额外中间件
 
 ---
 
-### 决策3: LLM 放在哪一层?
+### 决策3: 知乎数据的价值定位
 
-**结论**: 最上层（主控制器 main.py）
+知乎 API 只返回摘要，不返回全文。价值体现在：
+
+| 价值 | 实现方式 |
+|------|---------|
+| **精选推荐** | 按 voteup_count 排序，筛选高赞内容 |
+| **综合摘要** | LLM 汇总多条摘要，生成社区观点概述 |
+| **交叉分析** | arXiv 理论 × 知乎实践对照，1+1>2 |
+| **链接索引** | 高赞原文链接，供用户深入阅读 |
+
+---
+
+### 决策4: LLM 放在最上层
 
 | 因素 | 统一放在上层的好处 |
 |------|------------------|
@@ -350,63 +289,69 @@ for url in zhihu_urls[:3]:
 
 ---
 
-## 八、项目文件结构
+## 七、项目文件结构
 
 ```
-knowledge_hub/
+KnowledgeHub/
+│
+├── src/                           ← 核心模块
+│   ├── __init__.py
+│   ├── config.py                  配置管理 ✅
+│   ├── llm_client.py              LLM 客户端 ✅
+│   ├── search_strategy.py         搜索策略知识库 ✅
+│   ├── smart_search.py            智能搜索 ✅
+│   ├── zhihu_client.py            知乎搜索客户端 🔄
+│   └── report_generator.py        报告生成器 🔲
 │
 ├── knowledge_hub/                 ← Scrapy 项目
-│   ├── settings.py               配置文件 ✅
-│   ├── items.py                  数据结构 ✅
-│   ├── pipelines.py              数据清洗 ✅
-│   └── spiders/
-│       ├── arxiv.py              arXiv爬虫 ✅
-│       └── zhihu.py              知乎爬虫 🔲
+│   ├── knowledge_hub/
+│   │   ├── settings.py            Scrapy 配置 ✅
+│   │   ├── items.py               数据结构 ✅
+│   │   ├── pipelines.py           数据清洗 ✅
+│   │   └── spiders/
+│   │       └── arxiv.py           arXiv 爬虫 ✅
+│   └── scrapy.cfg
 │
-├── docs/                         ← 文档目录
-│   ├── requirements.md           需求文档
-│   ├── architecture.md           本文档
-│   └── diagrams/                ← 流程图目录 🆕
-│       ├── system-overview.mmd   Mermaid源文件
-│       ├── system-overview.png   系统总览图
-│       ├── arxiv-flow.mmd
-│       ├── arxiv-flow.png        arXiv流程图
-│       ├── zhihu-flow.mmd
-│       ├── zhihu-flow.png        知乎流程图
-│       ├── tinyfish-role.mmd
-│       └── tinyfish-role.png     TinyFish角色图
+├── docs/                          ← 文档目录
+│   ├── architecture.md            本文档
+│   ├── reference.md               arXiv 搜索规范
+│   └── diagrams/                  流程图目录
+│       ├── system-overview.*      系统总览图
+│       ├── arxiv-flow.*           arXiv 流程图
+│       ├── zhihu-flow.*           知乎流程图
+│       └── tinyfish-role.*        TinyFish 角色图
 │
-├── search_strategy.py            搜索策略库 ✅
-├── smart_search.py               智能参数生成 ✅
-├── tinyfish_client.py            TinyFish客户端 🔲
-├── main.py                       主程序入口 🔲
+├── output/                        ← 输出目录
+│   └── arxiv_data.json
 │
-├── src/
-│   └── app.py                    Web界面 🔲
-│
-├── output/                       ← 输出目录
-│   ├── arxiv_data.json          已有测试数据
-│   └── zhihu_data.json
-│
-└── README.md                     项目说明
+├── .env                           环境变量（不提交）
+├── .env.example                   环境变量示例
+└── README.md                      项目说明
 ```
 
 ---
 
-## 九、快速开始
+## 八、快速开始
 
 ### 当前可用的命令
 
 ```bash
-# 1. 运行 arXiv 爬虫
+# 1. 运行 arXiv 爬虫（默认 URL）
 cd knowledge_hub
 scrapy crawl arxiv -o output/arxiv_data.json
 
-# 2. 测试智能搜索（当前为模拟版）
-python smart_search.py
+# 2. 运行 arXiv 爬虫（LLM 生成的 URL）
+scrapy crawl arxiv -a url="https://arxiv.org/search/?searchtype=all&query=Transformer%20AND%20optimization&abstracts=show&size=50&order=-announced_date_first"
 
-# 3. 查看输出结果
-cat output/arxiv_data.json | head -20
+# 3. 测试智能搜索
+cd ..
+python -m src.smart_search
+
+# 4. 测试 LLM 连接
+python -m src.llm_client
+
+# 5. 测试知乎搜索（开发完成后）
+python -m src.zhihu_client
 ```
 
 ### 未来完整流程（开发完成后）
@@ -414,25 +359,23 @@ cat output/arxiv_data.json | head -20
 ```bash
 # 一键运行完整流程
 python main.py "我想了解 Transformer 优化的最新进展"
-
-# 启动 Web 界面
-streamlit run src/app.py
 ```
 
 ---
 
-## 十、核心文件索引
+## 九、核心文件索引
 
 | 文件路径 | 用途 | 开发状态 |
 |---------|------|----------|
-| `spiders/arxiv.py` | arXiv 爬虫主逻辑 | ✅ 已完成 |
-| `items.py` | ArxivItem/ZhihuItem 定义 | ✅ 已完成 |
-| `pipelines.py` | 数据清洗和验证 | ✅ 已完成 |
-| `settings.py` | Scrapy 全局配置 | ✅ 已完成 |
-| `search_strategy.py` | 搜索参数知识库 | ✅ 已完成 |
-| `smart_search.py` | LLM 参数生成器（模拟版） | ✅ 已完成 |
-| `tinyfish_client.py` | TinyFish API 封装 | 🔲 待开发 |
-| `spiders/zhihu.py` | 知乎爬虫 | 🔲 待开发 |
+| `src/config.py` | 配置管理（LLM/知乎/通用） | ✅ 已完成 |
+| `src/llm_client.py` | LLM 客户端（chat/chat_text/chat_json） | ✅ 已完成 |
+| `src/search_strategy.py` | arXiv 搜索策略知识库 | ✅ 已完成 |
+| `src/smart_search.py` | 智能搜索（LLM → URL/keywords） | ✅ 已完成 |
+| `src/zhihu_client.py` | 知乎搜索 API 客户端 | 🔄 开发中 |
+| `src/report_generator.py` | 报告生成器（LLM 综合分析） | 🔲 待开发 |
+| `knowledge_hub/spiders/arxiv.py` | arXiv 爬虫 | ✅ 已完成 |
+| `knowledge_hub/items.py` | 数据结构定义 | ✅ 已完成 |
+| `knowledge_hub/pipelines.py` | 数据清洗和验证 | ✅ 已完成 |
 | `main.py` | 主程序入口 | 🔲 待开发 |
 
 ---
