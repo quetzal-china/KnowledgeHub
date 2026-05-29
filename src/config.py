@@ -1,3 +1,15 @@
+"""
+config.py — 全局配置管理
+
+加载 .env 环境变量，为各模块提供统一配置入口
+
+配置分组:
+    MiMoConfig     — 小米 MiMo LLM 配置
+    DeepSeekConfig — DeepSeek LLM 配置
+    ZhihuConfig    — 知乎开发者 API 配置
+    Config         — 通用配置 + LLM Provider 路由
+"""
+
 import os
 from datetime import datetime
 from pathlib import Path
@@ -11,7 +23,11 @@ class MiMoConfig:
     API_KEY = os.getenv("MIMO_API_KEY")
     BASE_URL = os.getenv("MIMO_BASE_URL", "https://token-plan-cn.xiaomimimo.com/v1")
     MODEL = os.getenv("MIMO_MODEL", "mimo-v2.5-pro")
-    SYSTEM_PROMPT = f"You are MiMo, an AI assistant developed by Xiaomi. Today is date: {datetime.now().strftime('%A, %B %d, %Y')}. Your knowledge cutoff date is December 2024."
+    SYSTEM_PROMPT = (
+        f"You are MiMo, an AI assistant developed by Xiaomi. "
+        f"Today is date: {datetime.now().strftime('%A, %B %d, %Y')}. "
+        f"Your knowledge cutoff date is December 2024."
+    )
 
 
 class DeepSeekConfig:
@@ -22,7 +38,10 @@ class DeepSeekConfig:
 
 
 class ZhihuConfig:
-    BASE_URL = os.getenv("ZHIHU_BASE_URL", "https://developer.zhihu.com/api/v1/content/zhihu_search")
+    BASE_URL = os.getenv(
+        "ZHIHU_BASE_URL",
+        "https://developer.zhihu.com/api/v1/content/zhihu_search",
+    )
     ACCESS_KEY = os.getenv("ZHIHU_ACCESS_KEY")
 
 
@@ -38,14 +57,12 @@ class Config:
     LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.7"))
     LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "8192"))
 
-    TINYFISH_API_KEY = os.getenv("TINYFISH_API_KEY")
-    ZHIHU_ACCESS_KEY = os.getenv("ZHIHU_ACCESS_KEY")
-
     ARXIV_MAX_PAGES = int(os.getenv("ARXIV_MAX_PAGES", "5"))
-    ZHIHU_MAX_ANSWERS = int(os.getenv("ZHIHU_MAX_ANSWERS", "50"))
+    ZHIHU_MAX_ANSWERS = int(os.getenv("ZHIHU_MAX_ANSWERS", "10"))
 
     @classmethod
     def get_llm_config(cls):
+        """根据 LLM_PROVIDER 返回对应配置类"""
         provider = cls.LLM_PROVIDER.lower()
         if provider not in PROVIDERS:
             raise ValueError(
@@ -56,6 +73,7 @@ class Config:
 
     @classmethod
     def validate(cls):
+        """校验当前 LLM Provider 的 API_KEY 是否已设置"""
         llm = cls.get_llm_config()
         if not llm.API_KEY:
             raise ValueError(

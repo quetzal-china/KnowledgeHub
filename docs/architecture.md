@@ -208,22 +208,22 @@ LLM 分析用户意图，生成两条路线的搜索参数：
 
 ---
 
-### Phase 2: 知乎接入 🔄 进行中
+### Phase 2: 知乎接入 ✅ 已完成
 
 | 任务 | 文件路径 | 完成状态 | 说明 |
 |------|---------|----------|------|
-| 知乎搜索客户端 | `src/zhihu_client.py` | 🔄 开发中 | 封装知乎开发者搜索 API |
-| 多数据源路由 | `src/smart_search.py` | 🔲 待扩展 | 支持同时生成 arXiv + 知乎参数 |
-| 知乎搜索策略 | `src/search_strategy.py` | 🔲 待扩展 | 添加知乎搜索语法规则 |
+| 知乎搜索客户端 | `src/zhihu_client.py` | ✅ 完成 | 封装知乎开发者搜索 API，重试+429退避+401快速失败 |
+| 多数据源路由 | `src/smart_search.py` | ✅ 完成 | LLM 一次生成 arXiv + 知乎双数据源参数 |
+| 知乎搜索策略 | `src/search_strategy.py` | ✅ 完成 | 新增 ZHIHU_SEARCH_STRATEGY + COMBINED_SEARCH_STRATEGY |
 
 ---
 
-### Phase 3: 报告生成 ⏳ 待开发
+### Phase 3: 报告生成 ✅ 已完成
 
-| 任务 | 文件路径 | 说明 |
-|------|---------|------|
-| 报告生成器 | `src/report_generator.py` | LLM 综合分析 arXiv + 知乎数据，生成 Markdown 报告 |
-| 主程序入口 | `main.py` | 统一调度：LLM → arXiv + 知乎 → 报告 |
+| 任务 | 文件路径 | 完成状态 | 说明 |
+|------|---------|----------|------|
+| 报告生成器 | `src/report_generator.py` | ✅ 完成 | 方案A+C，LLM 综合分析生成 Markdown 报告 |
+| 主程序入口 | `main.py` | ✅ 完成 | 统一调度，arXiv+知乎并行搜索，支持 --mock/--no-arxiv/--no-zhihu |
 
 ---
 
@@ -300,8 +300,8 @@ KnowledgeHub/
 │   ├── llm_client.py              LLM 客户端 ✅
 │   ├── search_strategy.py         搜索策略知识库 ✅
 │   ├── smart_search.py            智能搜索 ✅
-│   ├── zhihu_client.py            知乎搜索客户端 🔄
-│   └── report_generator.py        报告生成器 🔲
+│   ├── zhihu_client.py            知乎搜索客户端 ✅
+│   └── report_generator.py        报告生成器 ✅
 │
 ├── knowledge_hub/                 ← Scrapy 项目
 │   ├── knowledge_hub/
@@ -322,8 +322,11 @@ KnowledgeHub/
 │       └── tinyfish-role.*        TinyFish 角色图
 │
 ├── output/                        ← 输出目录
-│   └── arxiv_data.json
+│   ├── arxiv_data.json            arXiv 爬取结果
+│   ├── zhihu_data.json            知乎搜索结果
+│   └── report_*.md                生成的调研报告
 │
+├── main.py                        ← 统一调度入口 ✅
 ├── .env                           环境变量（不提交）
 ├── .env.example                   环境变量示例
 └── README.md                      项目说明
@@ -350,15 +353,24 @@ python -m src.smart_search
 # 4. 测试 LLM 连接
 python -m src.llm_client
 
-# 5. 测试知乎搜索（开发完成后）
+# 5. 测试知乎搜索
 python -m src.zhihu_client
 ```
 
-### 未来完整流程（开发完成后）
+### 完整流程
 
 ```bash
-# 一键运行完整流程
+# 一键运行完整流程（arXiv + 知乎）
 python main.py "我想了解 Transformer 优化的最新进展"
+
+# 只搜索知乎
+python main.py "Transformer优化" --no-arxiv
+
+# 只搜索 arXiv
+python main.py "Transformer优化" --no-zhihu
+
+# Mock 模式（不调用 LLM 生成搜索参数）
+python main.py "Transformer优化" --mock
 ```
 
 ---
@@ -369,14 +381,14 @@ python main.py "我想了解 Transformer 优化的最新进展"
 |---------|------|----------|
 | `src/config.py` | 配置管理（LLM/知乎/通用） | ✅ 已完成 |
 | `src/llm_client.py` | LLM 客户端（chat/chat_text/chat_json） | ✅ 已完成 |
-| `src/search_strategy.py` | arXiv 搜索策略知识库 | ✅ 已完成 |
-| `src/smart_search.py` | 智能搜索（LLM → URL/keywords） | ✅ 已完成 |
-| `src/zhihu_client.py` | 知乎搜索 API 客户端 | 🔄 开发中 |
-| `src/report_generator.py` | 报告生成器（LLM 综合分析） | 🔲 待开发 |
+| `src/search_strategy.py` | 搜索策略知识库（arXiv + 知乎 + 合并策略） | ✅ 已完成 |
+| `src/smart_search.py` | 智能搜索（LLM → 双数据源参数） | ✅ 已完成 |
+| `src/zhihu_client.py` | 知乎搜索 API 客户端 | ✅ 已完成 |
+| `src/report_generator.py` | 报告生成器（方案A+C） | ✅ 已完成 |
 | `knowledge_hub/spiders/arxiv.py` | arXiv 爬虫 | ✅ 已完成 |
-| `knowledge_hub/items.py` | 数据结构定义 | ✅ 已完成 |
+| `knowledge_hub/items.py` | 数据结构定义（ArxivItem） | ✅ 已完成 |
 | `knowledge_hub/pipelines.py` | 数据清洗和验证 | ✅ 已完成 |
-| `main.py` | 主程序入口 | 🔲 待开发 |
+| `main.py` | 主程序入口 | ✅ 已完成 |
 
 ---
 
@@ -402,4 +414,4 @@ mmdc -i <filename>.mmd -o <filename>.png -w 1200 -H 800 -b white
 
 ---
 
-*最后更新: 2026-05-27*
+*最后更新: 2026-05-28*
