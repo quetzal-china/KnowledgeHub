@@ -2,13 +2,14 @@
 main.py — KnowledgeHub 统一调度入口
 
 完整流程:
-    用户查询 → LLM 分析意图 → arXiv + 知乎并行搜索 → LLM 综合分析 → Markdown 报告
+    用户查询 → LLM 分析意图 → arXiv + 知乎并行搜索 → 数据可视化 → LLM 综合分析 → Markdown 报告 → PDF 导出
 
 用法:
     python main.py "Transformer优化的最新进展"
     python main.py "RAG评测方法" --no-arxiv
     python main.py "深度学习入门" --no-zhihu
     python main.py "快速测试" --mock
+    python main.py "RAG评测" --no-pdf
 """
 
 import sys
@@ -26,6 +27,8 @@ from src.config import Config
 from src.smart_search import smart_search
 from src.zhihu_client import zhihu_search
 from src.report_generator import generate_report
+from src.visualizer import generate_charts
+from src.pdf_exporter import export_pdf
 
 logger = logging.getLogger(__name__)
 
@@ -110,15 +113,17 @@ def run(
     use_arxiv: bool = True,
     use_zhihu: bool = True,
     use_llm: bool = True,
+    export_pdf_flag: bool = True,
 ) -> str:
     """
-    核心调度: 用户查询 → 搜索 → 报告
+    核心调度: 用户查询 → 搜索 → 可视化 → 报告 → PDF
 
     参数:
-        query:      用户自然语言查询
-        use_arxiv:  是否搜索 arXiv
-        use_zhihu:  是否搜索知乎
-        use_llm:    是否使用 LLM 生成搜索参数 (False 则用 mock)
+        query:           用户自然语言查询
+        use_arxiv:       是否搜索 arXiv
+        use_zhihu:       是否搜索知乎
+        use_llm:         是否使用 LLM 生成搜索参数 (False 则用 mock)
+        export_pdf_flag: 是否导出 PDF
 
     返回:
         Markdown 报告字符串
@@ -174,9 +179,17 @@ def run(
         filepath = _save_json(zhihu_data, "zhihu_data.json")
         logger.info(f"[知乎] 数据已保存: {filepath}")
 
-    # Step 4: 生成报告
-    logger.info("\n--- Step 3: LLM 综合分析 ---")
-    report = generate_report(query, arxiv_data, zhihu_data)
+    # Step 4: 数据可视化
+    logger.info("\n--- Step 4: 数据可视化 ---")
+    charts_dir = OUTPUT_DIR / "charts"
+    charts = generate_charts(arxiv_data, zhihu_data, charts_dir)
+    if charts:
+        for name, path in charts.items():
+            logger.info(f"  {name}: {path}")
+
+    # Step 5: 生成报告
+    logger.info("\n--- Step 5: LLM 综合分析 ---")
+    report = generate_report(query, arxiv_data, zhihu_data, charts=charts)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_query = query[:20].replace(" ", "_")
@@ -187,6 +200,16 @@ def run(
         f.write(report)
     logger.info(f"[报告] 已保存: {report_file}")
 
+    # Step 6: PDF 导出
+    if export_pdf_flag:
+        logger.info("\n--- Step 6: PDF 导出 ---")
+        try:
+            pdf_path = report_file.with_suffix(".pdf")
+            export_pdf(report, pdf_path, charts_dir=charts_dir)
+            logger.info(f"[PDF] 已保存: {pdf_path}")
+        except Exception as e:
+            logger.warning(f"[PDF] 导出失败（不影响报告）: {e}")
+
     return report
 
 
@@ -196,6 +219,7 @@ def main():
     parser.add_argument("--no-arxiv", action="store_true", help="跳过 arXiv 搜索")
     parser.add_argument("--no-zhihu", action="store_true", help="跳过知乎搜索")
     parser.add_argument("--mock", action="store_true", help="使用 mock 模式（不调用 LLM 生成搜索参数）")
+    parser.add_argument("--no-pdf", action="store_true", help="跳过 PDF 导出")
     parser.add_argument("--verbose", "-v", action="store_true", help="详细日志")
 
     args = parser.parse_args()
@@ -210,6 +234,7 @@ def main():
         use_arxiv=not args.no_arxiv,
         use_zhihu=not args.no_zhihu,
         use_llm=not args.mock,
+        export_pdf_flag=not args.no_pdf,
     )
 
     print(f"\n{'='*60}")

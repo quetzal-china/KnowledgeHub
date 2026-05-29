@@ -118,6 +118,7 @@ def generate_report(
     query: str,
     arxiv_data: list[dict],
     zhihu_data: list[dict],
+    charts: dict[str, str] | None = None,
 ) -> str:
     """
     生成 Markdown 调研报告
@@ -126,6 +127,7 @@ def generate_report(
         query:      用户原始查询
         arxiv_data: arXiv 搜索结果列表 (来自 Scrapy 或 JSON)
         zhihu_data: 知乎搜索结果列表 (来自 zhihu_client)
+        charts:     图表映射 {图表名: 图片路径}，由 visualizer.generate_charts() 生成
 
     返回:
         Markdown 格式的调研报告字符串
@@ -153,7 +155,42 @@ def generate_report(
         max_tokens=8192,
     )
 
+    if charts:
+        report = _append_charts(report, charts)
+
     return report
+
+
+def _append_charts(report: str, charts: dict[str, str]) -> str:
+    """
+    在报告末尾追加图表章节
+
+    参数:
+        report: LLM 生成的 Markdown 报告
+        charts: 图表映射 {图表名: 图片路径}
+
+    返回:
+        追加图表后的完整报告
+    """
+    from pathlib import Path as _Path
+
+    chart_titles = {
+        "arxiv_categories": "arXiv 论文分类分布",
+        "arxiv_timeline": "arXiv 论文发布趋势",
+        "zhihu_ranking": "知乎讨论互动排行",
+        "overview": "数据源概览",
+    }
+
+    lines = ["\n\n---\n\n## 数据可视化\n"]
+
+    for name, path in charts.items():
+        title = chart_titles.get(name, name)
+        p = _Path(path)
+        rel = p.name
+        lines.append(f"### {title}\n")
+        lines.append(f"![{title}]({rel})\n")
+
+    return report + "\n".join(lines)
 
 
 if __name__ == "__main__":
