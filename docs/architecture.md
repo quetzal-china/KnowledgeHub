@@ -91,12 +91,13 @@ LLM 分析用户意图，生成两条路线的搜索参数：
   "arxiv": {
     "url": "https://arxiv.org/search/?searchtype=all&query=Transformer%20AND%20optimization&abstracts=show&size=50&order=-announced_date_first",
     "keywords": "Transformer AND optimization",
-    "size": 50
+    "size": 50,
+    "order": "-announced_date_first"
   },
 
   "zhihu": {
     "query": "Transformer优化 LLM加速 模型压缩",
-    "limit": 15
+    "count": 10
   }
 }
 ```
@@ -231,7 +232,7 @@ LLM 分析用户意图，生成两条路线的搜索参数：
 
 | 任务 | 说明 |
 |------|------|
-| Markdown 报告输出 | 自动生成人类可读的调研报告 |
+| Markdown 报告输出 | ✅ 已完成（Phase 3） |
 | Streamlit Web 界面 | 交互式数据展示 |
 | 导出功能 | 支持 PDF/Word/Excel 导出 |
 
@@ -410,8 +411,7 @@ mmdc -i <filename>.mmd -o <filename>.png -w 1200 -H 800 -b white
 | 系统总览图 | `system-overview.*` | 展示整体架构和模块关系 |
 | arXiv 流程图 | `arxiv-flow.*` | 展示 arXiv 数据采集的详细步骤 |
 | 知乎流程图 | `zhihu-flow.*` | 展示知乎数据采集的详细步骤 |
-| TinyFish 角色图 | `tinyfish-role.*` | 展示 TinyFish 支持的平台和功能 |
 
 ---
 
-*最后更新: 2026-05-28*
+*最后更新: 2026-05-29*

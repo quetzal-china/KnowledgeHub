@@ -14,11 +14,10 @@ KnowledgeHub 是一个基于 AI 的知识检索系统，能够：
 
 ## 技术栈
 
-- 采集层: Scrapy + XPath (arXiv), Scrapy + API (知乎)
-- 搜索层: TinyFish Search API (免费)
-- 处理层: DeepSeek API (关键词提取、内容总结)
-- 分析层: Pandas (数据处理), Matplotlib (可视化)
-- 前端: Streamlit (简单 Web 界面)
+- 采集层: Scrapy + XPath (arXiv), 知乎开发者 API (知乎)
+- 搜索层: LLM 智能分析 (MiMo / DeepSeek)
+- 分析层: LLM 综合摘要 + 交叉分析
+- 前端: Streamlit (Web 界面, Phase 4)
 - 输出: Markdown, JSON
   
 ---
@@ -45,9 +44,17 @@ cp .env.example .env
 ### 运行
 
 ```bash
+# 完整流程（arXiv + 知乎）
 python main.py "Transformer 优化"
-Web 界面
-streamlit run src/app.py
+
+# 只搜索知乎
+python main.py "Transformer优化" --no-arxiv
+
+# 只搜索 arXiv
+python main.py "Transformer优化" --no-zhihu
+
+# Mock 模式（不调用 LLM 生成搜索参数）
+python main.py "快速测试" --mock
 ```
 
 ### 开发流程
