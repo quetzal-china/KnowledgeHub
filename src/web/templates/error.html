@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}错误 — KnowledgeHub{% endblock %}
+
+{% block content %}
+<div class="error-page">
+    <div class="error-card">
+        <div class="error-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+        </div>
+        <h2>出错了</h2>
+        <p>{{ message }}</p>
+        <a href="/" class="btn-primary">返回首页</a>
+    </div>
+</div>
+{% endblock %}

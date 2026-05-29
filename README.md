@@ -17,8 +17,9 @@ KnowledgeHub 是一个基于 AI 的知识检索系统，能够：
 - 采集层: Scrapy + XPath (arXiv), 知乎开发者 API (知乎)
 - 搜索层: LLM 智能分析 (MiMo / DeepSeek)
 - 分析层: LLM 综合摘要 + 交叉分析
-- 前端: Streamlit (Web 界面, Phase 4)
-- 输出: Markdown, JSON
+- 可视化: matplotlib + numpy (图表生成)
+- 前端: FastAPI + Jinja2 + 现代 CSS (Web 界面)
+- 输出: Markdown, JSON, PDF
   
 ---
 ## 快速开始
@@ -41,10 +42,10 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-### 运行
+### 命令行运行
 
 ```bash
-# 完整流程（arXiv + 知乎）
+# 完整流程（arXiv + 知乎 + 可视化 + PDF）
 python main.py "Transformer 优化"
 
 # 只搜索知乎
@@ -55,7 +56,23 @@ python main.py "Transformer优化" --no-zhihu
 
 # Mock 模式（不调用 LLM 生成搜索参数）
 python main.py "快速测试" --mock
+
+# 不导出 PDF
+python main.py "Transformer 优化" --no-pdf
 ```
+
+### 启动 Web 界面
+
+```bash
+# 方式 1: 直接启动（需先激活 conda 环境）
+conda activate knowledge-hub
+python -m uvicorn src.web.app:app --host 0.0.0.0 --port 8000
+
+# 方式 2: 使用 conda run（无需手动激活）
+conda run -n knowledge-hub python -m uvicorn src.web.app:app --host 0.0.0.0 --port 8000
+```
+
+访问 http://localhost:8000 即可使用 Web 界面进行搜索、查看报告和图表。
 
 ### 开发流程
 

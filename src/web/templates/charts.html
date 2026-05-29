@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}图表库 — KnowledgeHub{% endblock %}
+
+{% block content %}
+<div class="charts-page">
+    <h1 class="page-title">数据可视化图表库</h1>
+
+    {% if charts %}
+    <div class="chart-grid-full">
+        {% for chart in charts %}
+        <div class="chart-card-large">
+            <div class="chart-image-wrapper">
+                <img src="{{ chart.path }}" alt="{{ chart.name }}" loading="lazy">
+            </div>
+            <div class="chart-info">
+                <h3>{{ chart.name }}</h3>
+                <span class="chart-time">{{ chart.mtime }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);margin-bottom:1rem;">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+        </svg>
+        <p>暂无图表，请先执行一次搜索调研</p>
+        <a href="/" class="btn-primary">去搜索</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

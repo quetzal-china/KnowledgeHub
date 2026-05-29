@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} — KnowledgeHub{% endblock %}
+
+{% block content %}
+<div class="report-page">
+    <div class="report-toolbar">
+        <a href="/" class="btn-back">← 返回首页</a>
+        <div class="report-actions">
+            <a href="/api/download/md/{{ report_name }}" class="btn-sm btn-outline">下载 Markdown</a>
+            <a href="/api/download/{{ report_name }}" class="btn-sm">下载 PDF</a>
+        </div>
+    </div>
+
+    <article class="report-content">
+        {{ content | safe }}
+    </article>
+</div>
+{% endblock %}

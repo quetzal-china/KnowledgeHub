@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}KnowledgeHub — 首页{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <h1>AI 驱动的知识检索</h1>
+    <p class="subtitle">输入任意技术话题，自动从 arXiv 和知乎采集内容，生成结构化调研报告</p>
+
+    <form class="search-form" id="searchForm">
+        <div class="search-input-wrapper">
+            <input
+                type="text"
+                name="query"
+                id="queryInput"
+                placeholder="例如：Transformer 优化的最新进展、RAG 评测方法..."
+                required
+                autocomplete="off"
+            >
+            <button type="submit" class="search-btn" id="searchBtn">
+                <span class="btn-text">开始调研</span>
+                <span class="btn-spinner" style="display:none;">
+                    <svg class="spinner" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="31.4 31.4" transform="rotate(-90 12 12)"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite"/></circle></svg>
+                </span>
+            </button>
+        </div>
+
+        <div class="search-options">
+            <label class="option">
+                <input type="checkbox" name="use_arxiv" checked>
+                <span class="checkmark"></span>
+                <span>arXiv 论文</span>
+            </label>
+            <label class="option">
+                <input type="checkbox" name="use_zhihu" checked>
+                <span class="checkmark"></span>
+                <span>知乎讨论</span>
+            </label>
+            <label class="option">
+                <input type="checkbox" name="use_llm" checked>
+                <span class="checkmark"></span>
+                <span>LLM 智能分析</span>
+            </label>
+        </div>
+    </form>
+
+    <div class="search-status" id="searchStatus" style="display:none;">
+        <div class="status-card">
+            <div class="status-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
+                </svg>
+            </div>
+            <div class="status-text">
+                <strong>正在调研中...</strong>
+                <span id="statusDetail">LLM 分析搜索意图</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="search-result" id="searchResult" style="display:none;">
+        <div class="result-card success">
+            <div class="result-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                </svg>
+            </div>
+            <div class="status-text">
+                <strong>调研完成</strong>
+                <span>已采集 <span id="arxivCount">0</span> 篇 arXiv 论文 + <span id="zhihuCount">0</span> 条知乎讨论</span>
+            </div>
+            <div class="result-body" style="margin-left:auto;padding:0;border:0;">
+                <div class="result-actions">
+                    <a id="viewReportBtn" href="#" class="btn-primary">查看报告</a>
+                    <a id="downloadPdfBtn" href="#" class="btn-secondary">下载 PDF</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% if reports %}
+<section class="section">
+    <h2 class="section-title">历史报告</h2>
+    <div class="report-grid">
+        {% for report in reports %}
+        <div class="report-card">
+            <div class="report-header">
+                <h3>{{ report.name }}</h3>
+                <span class="report-time">{{ report.mtime }}</span>
+            </div>
+            <div class="report-actions">
+                <a href="/report/{{ report.name }}" class="btn-sm">查看</a>
+                {% if report.pdf_path %}
+                <a href="/api/download/{{ report.name }}" class="btn-sm btn-outline">PDF</a>
+                {% endif %}
+                <a href="/api/download/md/{{ report.name }}" class="btn-sm btn-outline">MD</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{% if charts %}
+<section class="section">
+    <h2 class="section-title">最新图表</h2>
+    <div class="chart-grid">
+        {% for chart in charts[:4] %}
+        <div class="chart-card">
+            <img src="{{ chart.path }}" alt="{{ chart.name }}">
+            <span class="chart-label">{{ chart.name }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% if charts|length > 4 %}
+    <div class="section-more">
+        <a href="/charts" class="btn-text-link">查看全部 {{ charts|length }} 张图表 &rarr;</a>
+    </div>
+    {% endif %}
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('searchForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const form = e.target;
+    const btn = document.getElementById('searchBtn');
+    const status = document.getElementById('searchStatus');
+    const result = document.getElementById('searchResult');
+    const detail = document.getElementById('statusDetail');
+
+    btn.disabled = true;
+    btn.querySelector('.btn-text').style.display = 'none';
+    btn.querySelector('.btn-spinner').style.display = 'inline';
+    status.style.display = 'block';
+    result.style.display = 'none';
+
+    const formData = new FormData(form);
+
+    try {
+        detail.textContent = '正在分析搜索意图并采集数据...';
+        const response = await fetch('/api/search', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            document.getElementById('arxivCount').textContent = data.arxiv_count;
+            document.getElementById('zhihuCount').textContent = data.zhihu_count;
+            document.getElementById('viewReportBtn').href = '/report/' + data.report_name;
+            document.getElementById('downloadPdfBtn').href = '/api/download/' + data.report_name;
+            if (!data.pdf_ready) {
+                document.getElementById('downloadPdfBtn').style.display = 'none';
+            }
+            status.style.display = 'none';
+            result.style.display = 'block';
+        } else {
+            detail.textContent = '搜索失败，请重试';
+        }
+    } catch (err) {
+        detail.textContent = '网络错误: ' + err.message;
+    } finally {
+        btn.disabled = false;
+        btn.querySelector('.btn-text').style.display = 'inline';
+        btn.querySelector('.btn-spinner').style.display = 'none';
+    }
+});
+</script>
+{% endblock %}

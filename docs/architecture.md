@@ -228,13 +228,17 @@ LLM 分析用户意图，生成两条路线的搜索参数：
 
 ---
 
-### Phase 4: 可视化展示 ⏳ 待开发
+### Phase 4: 可视化展示 ✅ 已完成
 
-| 任务 | 说明 |
-|------|------|
-| Markdown 报告输出 | ✅ 已完成（Phase 3） |
-| Streamlit Web 界面 | 交互式数据展示 |
-| 导出功能 | 支持 PDF/Word/Excel 导出 |
+| 任务 | 文件路径 | 完成状态 | 说明 |
+|------|---------|----------|------|
+| 数据可视化 | `src/visualizer.py` | ✅ 完成 | matplotlib 图表：分类分布/时间趋势/互动排行/概览 |
+| PDF 导出 | `src/pdf_exporter.py` | ✅ 完成 | Markdown → HTML → PDF（weasyprint） |
+| Web 界面 | `src/web/app.py` | ✅ 完成 | FastAPI + Jinja2 + 现代 CSS，深色主题 + glassmorphism |
+| 首页模板 | `src/web/templates/index.html` | ✅ 完成 | 搜索入口 + 历史报告 + 图表预览 |
+| 报告模板 | `src/web/templates/report.html` | ✅ 完成 | Markdown 渲染 + PDF/MD 下载 |
+| 图表库模板 | `src/web/templates/charts.html` | ✅ 完成 | 全量图表展示 |
+| 样式表 | `src/web/static/css/style.css` | ✅ 完成 | CSS 变量 + 响应式 + 动画交互 |
 
 ---
 
@@ -302,7 +306,21 @@ KnowledgeHub/
 │   ├── search_strategy.py         搜索策略知识库 ✅
 │   ├── smart_search.py            智能搜索 ✅
 │   ├── zhihu_client.py            知乎搜索客户端 ✅
-│   └── report_generator.py        报告生成器 ✅
+│   ├── report_generator.py        报告生成器 ✅
+│   ├── visualizer.py              数据可视化 ✅
+│   ├── pdf_exporter.py            PDF 导出 ✅
+│   └── web/                       Web 服务
+│       ├── __init__.py
+│       ├── app.py                 FastAPI 应用 ✅
+│       ├── static/
+│       │   └── css/
+│       │       └── style.css      样式表 ✅
+│       └── templates/             Jinja2 模板
+│           ├── base.html          基础模板 ✅
+│           ├── index.html         首页 ✅
+│           ├── report.html        报告页 ✅
+│           ├── charts.html        图表库 ✅
+│           └── error.html         错误页 ✅
 │
 ├── knowledge_hub/                 ← Scrapy 项目
 │   ├── knowledge_hub/
@@ -315,6 +333,8 @@ KnowledgeHub/
 │
 ├── docs/                          ← 文档目录
 │   ├── architecture.md            本文档
+│   ├── requirements.md            需求文档
+│   ├── llm-integration-plan.md    LLM 接入规划
 │   ├── reference.md               arXiv 搜索规范
 │   └── diagrams/                  流程图目录
 │       ├── system-overview.*      系统总览图
@@ -325,7 +345,13 @@ KnowledgeHub/
 ├── output/                        ← 输出目录
 │   ├── arxiv_data.json            arXiv 爬取结果
 │   ├── zhihu_data.json            知乎搜索结果
-│   └── report_*.md                生成的调研报告
+│   ├── report_*.md                生成的调研报告
+│   ├── report_*.pdf               PDF 导出报告
+│   └── charts/                    可视化图表
+│       ├── arxiv_categories.png
+│       ├── arxiv_timeline.png
+│       ├── zhihu_ranking.png
+│       └── overview.png
 │
 ├── main.py                        ← 统一调度入口 ✅
 ├── .env                           环境变量（不提交）
@@ -372,6 +398,9 @@ python main.py "Transformer优化" --no-zhihu
 
 # Mock 模式（不调用 LLM 生成搜索参数）
 python main.py "Transformer优化" --mock
+
+# 启动 Web 界面（conda 环境）
+conda run -n knowledge-hub python -m uvicorn src.web.app:app --host 0.0.0.0 --port 8000
 ```
 
 ---
@@ -385,7 +414,10 @@ python main.py "Transformer优化" --mock
 | `src/search_strategy.py` | 搜索策略知识库（arXiv + 知乎 + 合并策略） | ✅ 已完成 |
 | `src/smart_search.py` | 智能搜索（LLM → 双数据源参数） | ✅ 已完成 |
 | `src/zhihu_client.py` | 知乎搜索 API 客户端 | ✅ 已完成 |
-| `src/report_generator.py` | 报告生成器（方案A+C） | ✅ 已完成 |
+| `src/report_generator.py` | 报告生成器（方案A+C，含图表嵌入） | ✅ 已完成 |
+| `src/visualizer.py` | 数据可视化（matplotlib 图表） | ✅ 已完成 |
+| `src/pdf_exporter.py` | PDF 导出（Markdown → PDF） | ✅ 已完成 |
+| `src/web/app.py` | Web 服务（FastAPI） | ✅ 已完成 |
 | `knowledge_hub/spiders/arxiv.py` | arXiv 爬虫 | ✅ 已完成 |
 | `knowledge_hub/items.py` | 数据结构定义（ArxivItem） | ✅ 已完成 |
 | `knowledge_hub/pipelines.py` | 数据清洗和验证 | ✅ 已完成 |
