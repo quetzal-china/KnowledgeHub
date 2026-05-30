@@ -179,30 +179,33 @@ def run(
         filepath = _save_json(zhihu_data, "zhihu_data.json")
         logger.info(f"[知乎] 数据已保存: {filepath}")
 
-    # Step 4: 数据可视化
-    logger.info("\n--- Step 4: 数据可视化 ---")
-    charts_dir = OUTPUT_DIR / "charts"
+    # Step 4: 确定报告名
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    safe_query = query[:20].replace(" ", "_")
+    report_name = f"report_{safe_query}_{timestamp}"
+
+    # Step 5: 数据可视化（保存到报告专属目录）
+    logger.info("\n--- Step 5: 数据可视化 ---")
+    charts_dir = OUTPUT_DIR / "charts" / report_name
     charts = generate_charts(arxiv_data, zhihu_data, charts_dir)
     if charts:
         for name, path in charts.items():
             logger.info(f"  {name}: {path}")
 
-    # Step 5: 生成报告
-    logger.info("\n--- Step 5: LLM 综合分析 ---")
+    # Step 6: 生成报告
+    logger.info("\n--- Step 6: LLM 综合分析 ---")
     report = generate_report(query, arxiv_data, zhihu_data, charts=charts)
 
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    safe_query = query[:20].replace(" ", "_")
-    report_file = OUTPUT_DIR / f"report_{safe_query}_{timestamp}.md"
+    report_file = OUTPUT_DIR / f"{report_name}.md"
 
     OUTPUT_DIR.mkdir(exist_ok=True)
     with open(report_file, "w", encoding="utf-8") as f:
         f.write(report)
     logger.info(f"[报告] 已保存: {report_file}")
 
-    # Step 6: PDF 导出
+    # Step 7: PDF 导出
     if export_pdf_flag:
-        logger.info("\n--- Step 6: PDF 导出 ---")
+        logger.info("\n--- Step 7: PDF 导出 ---")
         try:
             pdf_path = report_file.with_suffix(".pdf")
             export_pdf(report, pdf_path, charts_dir=charts_dir)

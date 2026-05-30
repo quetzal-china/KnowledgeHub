@@ -68,28 +68,41 @@ def _list_reports() -> list[dict]:
     md_files = sorted(OUTPUT_DIR.glob("report_*.md"), key=lambda p: p.stat().st_mtime, reverse=True)
     for md in md_files:
         pdf = md.with_suffix(".pdf")
+        report_name = md.stem
+        chart_dir = CHARTS_DIR / report_name
+        chart_count = len(list(chart_dir.glob("*.png"))) if chart_dir.exists() else 0
         reports.append({
-            "name": md.stem,
+            "name": report_name,
             "md_path": str(md),
             "pdf_path": str(pdf) if pdf.exists() else None,
+            "chart_count": chart_count,
             "mtime": datetime.fromtimestamp(md.stat().st_mtime).strftime("%Y-%m-%d %H:%M"),
         })
     return reports
 
 
 def _list_charts() -> list[dict]:
-    """列出所有图表文件"""
+    """列出所有图表文件，按报告分组"""
     charts = []
     if not CHARTS_DIR.exists():
         return charts
 
-    for f in sorted(CHARTS_DIR.glob("*.png"), key=lambda p: p.stat().st_mtime, reverse=True):
-        charts.append({
-            "name": f.stem,
-            "path": f"/charts/{f.name}",
-            "mtime": datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m-%d %H:%M"),
-        })
+    for chart_dir in sorted(CHARTS_DIR.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
+        if not chart_dir.is_dir():
+            continue
+        for f in sorted(chart_dir.glob("*.png"), key=lambda p: p.stat().st_mtime, reverse=True):
+            charts.append({
+                "name": f.stem,
+                "report": chart_dir.name,
+                "path": f"/charts/{chart_dir.name}/{f.name}",
+                "mtime": datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m-%d %H:%M"),
+            })
     return charts
+
+
+def _get_report_chart_dir(report_name: str) -> Path:
+    """获取报告对应的图表目录"""
+    return CHARTS_DIR / report_name
 
 
 # ─── 页面路由 ───────────────────────────────────────────────
@@ -123,7 +136,7 @@ async def view_report(request: Request, report_name: str):
         alt = match.group(1)
         src = match.group(2)
         if not src.startswith(("http://", "https://", "/")):
-            src = f"/charts/{src}"
+            src = f"/charts/{report_name}/{src}"
         return f'<img alt="{alt}" src="{src}"'
 
     html_content = re.sub(
@@ -223,21 +236,25 @@ async def api_search(
             except Exception as e:
                 logger.error(f"[{source}] 异常: {e}")
 
-    # Step 3: 可视化
-    charts = generate_charts(arxiv_data, zhihu_data, CHARTS_DIR)
-
-    # Step 4: 生成报告
-    report = generate_report(query, arxiv_data, zhihu_data, charts=charts)
-
+    # Step 3: 确定报告名
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_query = query[:20].replace(" ", "_")
-    report_file = OUTPUT_DIR / f"report_{safe_query}_{timestamp}.md"
+    report_name = f"report_{safe_query}_{timestamp}"
+
+    # Step 4: 可视化（保存到报告专属目录）
+    report_chart_dir = _get_report_chart_dir(report_name)
+    charts = generate_charts(arxiv_data, zhihu_data, report_chart_dir)
+
+    # Step 5: 生成报告
+    report = generate_report(query, arxiv_data, zhihu_data, charts=charts)
+
+    report_file = OUTPUT_DIR / f"{report_name}.md"
     report_file.write_text(report, encoding="utf-8")
 
-    # Step 5: PDF
+    # Step 6: PDF
     pdf_path = report_file.with_suffix(".pdf")
     try:
-        export_pdf(report, pdf_path, charts_dir=CHARTS_DIR)
+        export_pdf(report, pdf_path, charts_dir=report_chart_dir)
     except Exception as e:
         logger.warning(f"[Web] PDF 导出失败: {e}")
 
@@ -246,7 +263,7 @@ async def api_search(
         "query": query,
         "arxiv_count": len(arxiv_data),
         "zhihu_count": len(zhihu_data),
-        "report_name": report_file.stem,
+        "report_name": report_name,
         "pdf_ready": pdf_path.exists(),
     }
 
@@ -285,6 +302,8 @@ async def download_zip(report_name: str):
     md_text = md_file.read_text(encoding="utf-8")
     images = re.findall(r"!\[([^\]]*)\]\(([^)]+)\)", md_text)
 
+    report_chart_dir = _get_report_chart_dir(report_name)
+
     tmp_dir = tempfile.mkdtemp()
     zip_path = Path(tmp_dir) / f"{report_name}.zip"
 
@@ -297,7 +316,9 @@ async def download_zip(report_name: str):
         zf.writestr(f"{report_name}/{report_name}.md", md_in_zip.encode("utf-8"))
 
         for _, img_name in images:
-            img_path = CHARTS_DIR / img_name
+            img_path = report_chart_dir / img_name
+            if not img_path.exists():
+                img_path = CHARTS_DIR / img_name
             if img_path.exists():
                 zf.write(str(img_path), f"{report_name}/img/{img_name}")
 

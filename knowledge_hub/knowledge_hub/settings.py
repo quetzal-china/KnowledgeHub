@@ -19,7 +19,8 @@ ADDONS = {}
 #USER_AGENT = "knowledge_hub (+http://www.yourdomain.com)"
 
 # Obey robots.txt rules
-ROBOTSTXT_OBEY = False
+# arXiv robots.txt 允许学术爬取，遵守其规则
+ROBOTSTXT_OBEY = True
 
 # Concurrency and throttling settings
 #CONCURRENT_REQUESTS = 16

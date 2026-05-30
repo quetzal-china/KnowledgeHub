@@ -16,6 +16,9 @@
             <div class="chart-info">
                 <h3>{{ chart.name }}</h3>
                 <span class="chart-time">{{ chart.mtime }}</span>
+                {% if chart.report %}
+                <a href="/report/{{ chart.report }}" class="chart-report-link">查看报告 →</a>
+                {% endif %}
             </div>
         </div>
         {% endfor %}

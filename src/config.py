@@ -54,7 +54,7 @@ PROVIDERS = {
 class Config:
     LLM_PROVIDER = os.getenv("LLM_PROVIDER", "mimo")
 
-    LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.7"))
+    LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.5"))
     LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "8192"))
 
     ARXIV_MAX_PAGES = int(os.getenv("ARXIV_MAX_PAGES", "5"))

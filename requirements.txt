@@ -1,0 +1,13 @@
+scrapy>=2.16.0
+fastapi>=0.136.0
+uvicorn>=0.48.0
+jinja2>=3.1.0
+markdown>=3.10
+matplotlib>=3.10.0
+numpy>=2.0
+weasyprint>=68.0
+openai>=2.38.0
+requests>=2.33.0
+python-dotenv>=1.2.0
+itemadapter>=0.13.0
+pytest>=8.0
