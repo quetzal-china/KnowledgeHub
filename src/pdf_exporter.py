@@ -35,33 +35,34 @@ body {
                  "Microsoft YaHei", "DejaVu Sans", sans-serif;
     font-size: 11pt;
     line-height: 1.7;
-    color: #333;
+    color: #1E293B;
+    background: white;
 }
 
 h1 {
     font-size: 20pt;
-    color: #1a1a2e;
-    border-bottom: 2px solid #16213e;
+    color: #1E293B;
+    border-bottom: 2px solid #2563EB;
     padding-bottom: 6px;
     margin-top: 0;
 }
 
 h2 {
     font-size: 15pt;
-    color: #16213e;
-    border-bottom: 1px solid #ddd;
+    color: #2563EB;
+    border-bottom: 1px solid #E2E8F0;
     padding-bottom: 4px;
     margin-top: 1.5em;
 }
 
 h3 {
     font-size: 12pt;
-    color: #0f3460;
+    color: #1E293B;
     margin-top: 1.2em;
 }
 
 a {
-    color: #2196F3;
+    color: #2563EB;
     text-decoration: none;
 }
 
@@ -77,30 +78,30 @@ table {
 }
 
 th, td {
-    border: 1px solid #ddd;
+    border: 1px solid #E2E8F0;
     padding: 8px 12px;
     text-align: left;
 }
 
 th {
-    background-color: #16213e;
-    color: white;
+    background-color: #F1F5F9;
+    color: #1E293B;
     font-weight: bold;
 }
 
 tr:nth-child(even) {
-    background-color: #f9f9f9;
+    background-color: #F8FAFC;
 }
 
 code {
-    background-color: #f4f4f4;
+    background-color: #F1F5F9;
     padding: 2px 5px;
     border-radius: 3px;
     font-size: 10pt;
 }
 
 pre {
-    background-color: #f4f4f4;
+    background-color: #F1F5F9;
     padding: 12px;
     border-radius: 5px;
     overflow-x: auto;
@@ -108,11 +109,11 @@ pre {
 }
 
 blockquote {
-    border-left: 4px solid #2196F3;
+    border-left: 4px solid #2563EB;
     margin: 1em 0;
     padding: 0.5em 1em;
-    background-color: #f8f9fa;
-    color: #555;
+    background-color: #F8FAFC;
+    color: #475569;
 }
 
 img {

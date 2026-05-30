@@ -308,6 +308,38 @@ a:hover {
   color: var(--primary);
 }
 
+.status-card.loading {
+  animation: border-pulse 2s ease-in-out infinite;
+}
+
+@keyframes border-pulse {
+  0%, 100% {
+    border-color: var(--border);
+    box-shadow: var(--shadow);
+  }
+  50% {
+    border-color: rgba(37, 99, 235, 0.35);
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.06), var(--shadow);
+  }
+}
+
+.stage-dots::after {
+  content: '';
+  animation: dots 1.5s steps(4, end) infinite;
+}
+
+@keyframes dots {
+  0%   { content: ''; }
+  25%  { content: '.'; }
+  50%  { content: '..'; }
+  75%  { content: '...'; }
+  100% { content: ''; }
+}
+
+#statusDetail {
+  transition: opacity 0.3s ease;
+}
+
 .result-card.success .result-icon {
   background: rgba(5, 150, 105, 0.08);
 }

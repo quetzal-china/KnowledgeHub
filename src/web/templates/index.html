@@ -45,16 +45,13 @@
     </form>
 
     <div class="search-status" id="searchStatus" style="display:none;">
-        <div class="status-card">
+        <div class="status-card loading" id="statusCard">
             <div class="status-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polyline points="12 6 12 12 16 14"/>
-                </svg>
+                <svg class="spinner" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="31.4 31.4" transform="rotate(-90 12 12)"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite"/></circle></svg>
             </div>
             <div class="status-text">
                 <strong>正在调研中...</strong>
-                <span id="statusDetail">LLM 分析搜索意图</span>
+                <span id="statusDetail">LLM 分析搜索意图...<span class="stage-dots"></span></span>
             </div>
         </div>
     </div>
@@ -134,16 +131,42 @@ document.getElementById('searchForm').addEventListener('submit', async function(
     const result = document.getElementById('searchResult');
     const detail = document.getElementById('statusDetail');
 
+    const stages = [
+        'LLM 分析搜索意图...',
+        '正在采集 arXiv 论文...',
+        '正在采集知乎讨论...',
+        '正在生成可视化图表...',
+        '正在综合分析...'
+    ];
+    let stageIndex = 0;
+    let stageInterval = null;
+
+    function startStageCycle() {
+        stageIndex = 0;
+        detail.innerHTML = stages[0] + '<span class="stage-dots"></span>';
+        stageInterval = setInterval(() => {
+            stageIndex = (stageIndex + 1) % stages.length;
+            detail.innerHTML = stages[stageIndex] + '<span class="stage-dots"></span>';
+        }, 3000);
+    }
+
+    function stopStageCycle() {
+        if (stageInterval) {
+            clearInterval(stageInterval);
+            stageInterval = null;
+        }
+    }
+
     btn.disabled = true;
     btn.querySelector('.btn-text').style.display = 'none';
     btn.querySelector('.btn-spinner').style.display = 'inline';
     status.style.display = 'block';
     result.style.display = 'none';
+    startStageCycle();
 
     const formData = new FormData(form);
 
     try {
-        detail.textContent = '正在分析搜索意图并采集数据...';
         const response = await fetch('/api/search', {
             method: 'POST',
             body: formData
@@ -161,11 +184,14 @@ document.getElementById('searchForm').addEventListener('submit', async function(
             status.style.display = 'none';
             result.style.display = 'block';
         } else {
+            stopStageCycle();
             detail.textContent = '搜索失败，请重试';
         }
     } catch (err) {
+        stopStageCycle();
         detail.textContent = '网络错误: ' + err.message;
     } finally {
+        stopStageCycle();
         btn.disabled = false;
         btn.querySelector('.btn-text').style.display = 'inline';
         btn.querySelector('.btn-spinner').style.display = 'none';

@@ -14,13 +14,17 @@ app.py — KnowledgeHub Web 服务
 import sys
 import json
 import logging
+import re
+import zipfile
+import tempfile
+import shutil
 from pathlib import Path
 from datetime import datetime
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from fastapi import FastAPI, Request, Form, Query
-from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -114,6 +118,19 @@ async def view_report(request: Request, report_name: str):
     import markdown
     md_text = md_file.read_text(encoding="utf-8")
     html_content = markdown.markdown(md_text, extensions=["tables", "fenced_code"])
+
+    def _replace_img_src(match):
+        alt = match.group(1)
+        src = match.group(2)
+        if not src.startswith(("http://", "https://", "/")):
+            src = f"/charts/{src}"
+        return f'<img alt="{alt}" src="{src}"'
+
+    html_content = re.sub(
+        r'<img alt="([^"]*)" src="([^"]*)"',
+        _replace_img_src,
+        html_content,
+    )
 
     return templates.TemplateResponse(request, "report.html", {
         "title": report_name,
@@ -256,3 +273,40 @@ async def download_md(report_name: str):
     if not md_file.exists():
         return {"error": "Markdown 不存在"}
     return FileResponse(str(md_file), media_type="text/markdown", filename=f"{report_name}.md")
+
+
+@app.get("/api/download/zip/{report_name}")
+async def download_zip(report_name: str):
+    """下载 ZIP 报告（Markdown + 图片）"""
+    md_file = OUTPUT_DIR / f"{report_name}.md"
+    if not md_file.exists():
+        return {"error": "报告不存在"}
+
+    md_text = md_file.read_text(encoding="utf-8")
+    images = re.findall(r"!\[([^\]]*)\]\(([^)]+)\)", md_text)
+
+    tmp_dir = tempfile.mkdtemp()
+    zip_path = Path(tmp_dir) / f"{report_name}.zip"
+
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        md_in_zip = re.sub(
+            r"!\[([^\]]*)\]\(([^)]+)\)",
+            lambda m: f'![{m.group(1)}](img/{m.group(2)})',
+            md_text,
+        )
+        zf.writestr(f"{report_name}/{report_name}.md", md_in_zip.encode("utf-8"))
+
+        for _, img_name in images:
+            img_path = CHARTS_DIR / img_name
+            if img_path.exists():
+                zf.write(str(img_path), f"{report_name}/img/{img_name}")
+
+    def cleanup():
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    return FileResponse(
+        str(zip_path),
+        media_type="application/zip",
+        filename=f"{report_name}.zip",
+        background=cleanup,
+    )
