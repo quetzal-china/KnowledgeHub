@@ -43,6 +43,8 @@ BASE_DIR = Path(__file__).parent.parent.parent
 OUTPUT_DIR = BASE_DIR / "output"
 CHARTS_DIR = OUTPUT_DIR / "charts"
 
+CHARTS_DIR.mkdir(parents=True, exist_ok=True)
+
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "src" / "web" / "static")), name="static")
 app.mount("/charts", StaticFiles(directory=str(CHARTS_DIR)), name="charts")
 
